@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    ports:
+      - 3000:3000
+    volumes:
+      - ./frontend:/frontend
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    ports:
+      - 8000:8000
+    volumes:
+      - ./backend:/backend
+    depends_on:
+      - db
+    environment:
+      MYSQL_DATABASE: db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_PORT: 3306
+      MYSQL_HOST: db
+      TZ: "Asia/Tokyo"
+    command: /backend/tools/wait_for_mysql.sh db user password air -d
+  db:
+    build:
+      context: ./db/mysql
+    ports:
+      - 3306:3306
+    restart: always
+    environment:
+      MYSQL_DATABASE: db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+      TZ: "Asia/Tokyo"
+    volumes:
+      - ./db/mysql/migrations:/docker-entrypoint-initdb.d
+      - ./db/mysql/log:/var/log/mysql
+      - ./db/mysql/conf.d:/etc/mysql/conf.d
+  openapi:
+    image: swaggerapi/swagger-ui
+    ports:
+      - 8080:8080
+    volumes:
+      - ./reference/openapi.yaml:/openapi.yaml
+    environment:
+      SWAGGER_JSON: /openapi.yaml
